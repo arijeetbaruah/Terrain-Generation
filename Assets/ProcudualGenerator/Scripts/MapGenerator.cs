@@ -16,14 +16,7 @@ namespace ProcudualGenerator
         {
             get
             {
-                if (useFlatShading)
-                {
-                    return 95;
-                }
-                else
-                {
-                    return 239;
-                }
+                return 239;
             }
         }
 
@@ -42,7 +35,6 @@ namespace ProcudualGenerator
         public float meshHeightMultiplier;
         public AnimationCurve meshHeightCurve;
 
-        public bool useFlatShading;
         public bool useFalloff;
         public bool autoUpdate;
 
@@ -53,6 +45,7 @@ namespace ProcudualGenerator
         void Awake()
         {
             falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+            GenerateMap();
         }
 
         [Button]
@@ -64,14 +57,14 @@ namespace ProcudualGenerator
             }
 
             NativeArray<float> noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
-            NativeArray<Color> colourMap = new NativeArray<Color>(mapChunkSize * mapChunkSize, Allocator.Persistent);
+            NativeArray<Color> colourMap = new NativeArray<Color>(mapChunkSize * mapChunkSize, Allocator.TempJob);
 
-            NativeArray<float> nativeFalloffMap = new NativeArray<float>(falloffMap, Allocator.Persistent);
-            NativeArray<NativeTerrainType> nativeTerrainType = new NativeArray<NativeTerrainType>(regions.regions.Select(region => new NativeTerrainType()
+            NativeArray<float> nativeFalloffMap = new NativeArray<float>(falloffMap, Allocator.TempJob);
+            NativeArray<NativeTerrainType> nativeTerrainType = new NativeArray<NativeTerrainType>(regions.Data.Select(region => new NativeTerrainType()
             {
                 colour = region.colour,
                 height = region.height
-            }).ToArray(), Allocator.Persistent);
+            }).ToArray(), Allocator.TempJob);
             ColorMapGenerator colorMapGenerator = new ColorMapGenerator()
             {
                 mapChunkSize = mapChunkSize,
@@ -87,7 +80,7 @@ namespace ProcudualGenerator
 
 
             MapDisplay display = FindObjectOfType<MapDisplay>();
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeightMultiplier, mapChunkSize, meshHeightCurve, levelOfDetail, useFlatShading), TextureGenerator.TextureFromColourMap(colourMap, mapChunkSize, mapChunkSize));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, colourMap, meshHeightMultiplier, mapChunkSize, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColourMap(colourMap, mapChunkSize, mapChunkSize));
 
             noiseMap.Dispose();
             colourMap.Dispose();
@@ -148,14 +141,6 @@ namespace ProcudualGenerator
                 }
             }
         }
-    }
-
-    [System.Serializable]
-    public struct TerrainType
-    {
-        public string name;
-        public float height;
-        public Color colour;
     }
 
     public struct NativeTerrainType

@@ -2,9 +2,17 @@ using UnityEngine;
 
 namespace ProcudualGenerator
 {
-    [CreateAssetMenu]
-    public class TerrainRegion : ScriptableObject
+    public class TerrainRegion : BaseMultiConfig<TerrainType, TerrainRegion>
     {
-        public TerrainType[] regions;
+    }
+
+    [System.Serializable]
+    public class TerrainType : IConfigData
+    {
+        public string name;
+        public float height;
+        public Color colour;
+
+        public string ID => name;
     }
 }

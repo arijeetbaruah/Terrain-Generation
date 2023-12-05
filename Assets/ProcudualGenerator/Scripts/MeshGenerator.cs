@@ -2,27 +2,26 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace ProcudualGenerator
 {
     public static class MeshGenerator
     {
-        public static Mesh GenerateTerrainMesh(NativeArray<float> heightMap, float heightMultiplier, int borderedSize, AnimationCurve heightCurve, int levelOfDetail, bool useFlatShading)
+        public static Mesh GenerateTerrainMesh(NativeArray<float> heightMap, NativeArray<Color> colourMap, float heightMultiplier, int borderedSize, AnimationCurve heightCurve, int levelOfDetail)
         {
             int meshSize = borderedSize - 2;
             int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
             int verticesPerLine = (meshSize - 1) / meshSimplificationIncrement + 1;
 
-            NativeArray<Vector3> vertices = new NativeArray<Vector3>(verticesPerLine * verticesPerLine, Allocator.Persistent);
-            NativeArray<Vector2> uvs = new NativeArray<Vector2>(verticesPerLine * verticesPerLine, Allocator.Persistent);
-            NativeArray<int> triangles = new NativeArray<int>((verticesPerLine - 1) * (verticesPerLine - 1) * 6, Allocator.Persistent);
+            NativeArray<Vector3> vertices = new NativeArray<Vector3>(verticesPerLine * verticesPerLine, Allocator.TempJob);
+            NativeArray<Vector2> uvs = new NativeArray<Vector2>(verticesPerLine * verticesPerLine, Allocator.TempJob);
+            NativeArray<int> triangles = new NativeArray<int>((verticesPerLine - 1) * (verticesPerLine - 1) * 6, Allocator.TempJob);
 
-            NativeArray<int> borderTriangle = new NativeArray<int>(24 * verticesPerLine, Allocator.Persistent);
-            NativeArray<Vector3> borderVertices = new NativeArray<Vector3>(verticesPerLine * 4 + 4, Allocator.Persistent);
+            NativeArray<int> borderTriangle = new NativeArray<int>(24 * verticesPerLine, Allocator.TempJob);
+            NativeArray<Vector3> borderVertices = new NativeArray<Vector3>(verticesPerLine * 4 + 4, Allocator.TempJob);
 
-            NativeArray<Vector2> flatShadingUVS = new NativeArray<Vector2>(vertices.Length, Allocator.Persistent);
-            NativeArray<Vector3> flatShadingTriangles = new NativeArray<Vector3>(vertices.Length, Allocator.Persistent);
-            NativeArray<Vector3> bakedNormals = new NativeArray<Vector3>(vertices.Length, Allocator.Persistent);
+            NativeArray<Vector3> bakedNormals = new NativeArray<Vector3>(vertices.Length, Allocator.TempJob);
 
             MeshJobData meshJobData = new MeshJobData()
             {
@@ -33,21 +32,17 @@ namespace ProcudualGenerator
                 bakedNormals = bakedNormals,
 
                 borderTriangle = borderTriangle,
-                borderVertices = borderVertices,
-
-                flatShadingUVs = flatShadingUVS,
-                flatShadingVertice = flatShadingTriangles,
-                useFlatShading = useFlatShading
+                borderVertices = borderVertices
             };
 
-            NativeArray<float> heightCurveMap = new NativeArray<float>(borderedSize * borderedSize, Allocator.Persistent);
+            NativeArray<float> heightCurveMap = new NativeArray<float>(borderedSize * borderedSize, Allocator.TempJob);
 
             for (int i = 0; i < borderedSize * borderedSize; i++)
             {
                 heightCurveMap[i] = heightCurve.Evaluate(heightMap[i]);
             }
 
-            NativeArray<int> vertexIndexesMap = new NativeArray<int>(borderedSize * borderedSize, Allocator.Persistent);
+            NativeArray<int> vertexIndexesMap = new NativeArray<int>(borderedSize * borderedSize, Allocator.TempJob);
 
             MeshGeneratorJob meshGeneratorJob = new MeshGeneratorJob()
             {
@@ -66,7 +61,7 @@ namespace ProcudualGenerator
             JobHandle jobHandle = meshGeneratorJob.Schedule();
 
             jobHandle.Complete();
-            Mesh mesh = meshGeneratorJob.meshData.CreateMesh();
+            Mesh mesh = meshGeneratorJob.meshData.CreateMesh(colourMap);
 
             vertices.Dispose();
             uvs.Dispose();
@@ -74,8 +69,6 @@ namespace ProcudualGenerator
             borderTriangle.Dispose();
             borderVertices.Dispose();
             heightCurveMap.Dispose();
-            flatShadingUVS.Dispose();
-            flatShadingTriangles.Dispose();
             bakedNormals.Dispose();
 
             return mesh;
@@ -150,8 +143,6 @@ namespace ProcudualGenerator
                     vertexIndex++;
                 }
             }
-
-            meshData.FinalizeNormals();
         }
 
         private int GetVertexIndex(int x, int y)
@@ -172,10 +163,7 @@ namespace ProcudualGenerator
         private int triangleIndex;
         private int borderTriangleIndex;
 
-        public NativeArray<Vector3> flatShadingVertice;
-        public NativeArray<Vector2> flatShadingUVs;
         public NativeArray<Vector3> bakedNormals;
-        public bool useFlatShading;
 
         public void AddVertex(Vector3 vertexPosition, Vector2 uv, int vertexIndex)
         {
@@ -266,45 +254,24 @@ namespace ProcudualGenerator
             return Vector3.Cross(sideAB, sideAC).normalized;
         }
 
-        public void FinalizeNormals()
-        {
-            if (useFlatShading)
-            {
-                FlatShading();
-            }
-            else
-            {
-                BakeNormals();
-            }
-        }
-
-        public void FlatShading()
-        {
-            for (int i = 0; i < flatShadingVertice.Length; i++)
-            {
-                flatShadingVertice[i] = vertices[triangles[i]];
-                flatShadingUVs[i] = uvs[triangles[i]];
-                triangles[i] = i;
-            }
-
-            vertices = flatShadingVertice;
-            uvs = flatShadingUVs;
-        }
-
-        public Mesh CreateMesh()
+        public Mesh CreateMesh(NativeArray<Color> colourMap)
         {
             Mesh mesh = new Mesh();
-            mesh.vertices = vertices.ToArray();
-            mesh.triangles = triangles.ToArray();
-            mesh.uv = uvs.ToArray();
-            if (useFlatShading)
-            {
-                mesh.RecalculateNormals();
-            }
-            else
-            {
-                mesh.normals = bakedNormals.ToArray();
-            }
+
+            mesh.SetVertexBufferParams(vertices.Length, new VertexAttributeDescriptor(VertexAttribute.Position));
+            mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
+
+            mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
+            mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
+
+            mesh.subMeshCount = 1;
+            var descriptor = new SubMeshDescriptor(0, triangles.Length, MeshTopology.Triangles);
+            mesh.SetSubMesh(0, descriptor, MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices);
+
+            mesh.RecalculateBounds();
+            mesh.RecalculateNormals();
+            mesh.RecalculateTangents();
+
             return mesh;
         }
     }
