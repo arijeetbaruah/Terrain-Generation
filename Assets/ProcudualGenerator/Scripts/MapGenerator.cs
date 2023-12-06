@@ -9,38 +9,20 @@ namespace ProcudualGenerator
 {
     public class MapGenerator : MonoBehaviour
     {
-        public enum DrawMode { NoiseMap, ColourMap, Mesh };
-        public DrawMode drawMode;
-
-        public int mapChunkSize
-        {
-            get
-            {
-                return 239;
-            }
-        }
+        public const int mapChunkSize = 239;
 
         [PropertyRange(0, 6)]
         public int levelOfDetail;
-        public float noiseScale;
 
-        public int octaves;
-        [PropertyRange(0, 1)]
-        public float persistance;
-        public float lacunarity;
-
-        public int seed;
-        public Vector2 offset;
-
-        public float meshHeightMultiplier;
-        public AnimationCurve meshHeightCurve;
-
-        public bool useFalloff;
-        public bool autoUpdate;
-
-        public TerrainRegion regions;
+        [SerializeField] private ConfigRegistry configRegistry;
+        [SerializeField] private Material material;
 
         private float[] falloffMap;
+        private TerrainRegion regions;
+        private TerrainConfig terrainConfig;
+        private NoiseData noiseData;
+
+        public bool autoUpdate;
 
         void Awake()
         {
@@ -56,7 +38,33 @@ namespace ProcudualGenerator
                 falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
             }
 
-            NativeArray<float> noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, seed, noiseScale, octaves, persistance, lacunarity, offset);
+            if (noiseData == null && configRegistry.TryGetValue<NoiseData>(out noiseData))
+            {
+                return;
+            }
+
+            if (regions == null && configRegistry.TryGetValue<TerrainRegion>(out regions))
+            {
+                return;
+            }
+
+            if (terrainConfig == null && configRegistry.TryGetValue<TerrainConfig>(out terrainConfig))
+            {
+                return;
+            }
+
+            NativeArray<float> noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, noiseData.Data, terrainConfig.Data);
+
+            for (int x = 0; x < noiseMap.Length; x++)
+            {
+                if (terrainConfig.Data.useFalloff)
+                {
+                    noiseMap[x] = Mathf.Clamp01(noiseMap[x] - falloffMap[x]);
+                }
+            }
+
+            regions.UpdateMeshHeights(material, terrainConfig.Data.minHeight, terrainConfig.Data.maxHeight);
+
             NativeArray<Color> colourMap = new NativeArray<Color>(mapChunkSize * mapChunkSize, Allocator.TempJob);
 
             NativeArray<float> nativeFalloffMap = new NativeArray<float>(falloffMap, Allocator.TempJob);
@@ -65,10 +73,11 @@ namespace ProcudualGenerator
                 colour = region.colour,
                 height = region.height
             }).ToArray(), Allocator.TempJob);
+
             ColorMapGenerator colorMapGenerator = new ColorMapGenerator()
             {
                 mapChunkSize = mapChunkSize,
-                useFalloff = useFalloff,
+                useFalloff = terrainConfig.Data.useFalloff,
                 noiseMap = noiseMap,
                 falloffMap = nativeFalloffMap,
                 regions = nativeTerrainType,
@@ -80,7 +89,7 @@ namespace ProcudualGenerator
 
 
             MapDisplay display = FindObjectOfType<MapDisplay>();
-            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, colourMap, meshHeightMultiplier, mapChunkSize, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColourMap(colourMap, mapChunkSize, mapChunkSize));
+            display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, colourMap, terrainConfig.Data, mapChunkSize, levelOfDetail), TextureGenerator.TextureFromColourMap(colourMap, mapChunkSize, mapChunkSize));
 
             noiseMap.Dispose();
             colourMap.Dispose();
@@ -90,13 +99,26 @@ namespace ProcudualGenerator
 
         void OnValidate()
         {
-            if (lacunarity < 1)
+            configRegistry.AddListener(() =>
             {
-                lacunarity = 1;
+                if (autoUpdate)
+                {
+                    GenerateMap();
+                }
+            });
+            if (noiseData == null && configRegistry.TryGetValue<NoiseData>(out noiseData))
+            {
+                return;
             }
-            if (octaves < 0)
+
+            if (regions == null && configRegistry.TryGetValue<TerrainRegion>(out regions))
             {
-                octaves = 0;
+                return;
+            }
+
+            if (terrainConfig == null && configRegistry.TryGetValue<TerrainConfig>(out terrainConfig))
+            {
+                return;
             }
 
             if (autoUpdate)
@@ -125,10 +147,6 @@ namespace ProcudualGenerator
             {
                 for (int x = 0; x < mapChunkSize; x++)
                 {
-                    if (useFalloff)
-                    {
-                        noiseMap[y * mapChunkSize + x] = Mathf.Clamp01(noiseMap[y * mapChunkSize + x] - falloffMap[y * mapChunkSize + x]);
-                    }
                     float currentHeight = noiseMap[y * mapChunkSize + x];
                     for (int i = 0; i < regions.Length; i++)
                     {

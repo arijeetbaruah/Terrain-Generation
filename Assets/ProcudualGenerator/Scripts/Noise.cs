@@ -7,19 +7,20 @@ namespace ProcudualGenerator
 {
     public static class Noise
     {
-        public static NativeArray<float> GenerateNoiseMap(int mapWidth, int mapHeight, int seed, float scale, int octaves, float persistance, float lacunarity, Vector2 offset)
+        public static NativeArray<float> GenerateNoiseMap(int mapWidth, int mapHeight, NoiseConfigData noiseConfigData, TerrainData terrainData)
         {
             NativeArray<float> noiseMap = new NativeArray<float>(mapWidth * mapHeight, Allocator.Persistent);
 
-            System.Random prng = new System.Random(seed);
-            NativeArray<Vector2> octaveOffsets = new NativeArray<Vector2>(octaves, Allocator.Persistent);
-            for (int i = 0; i < octaves; i++)
+            System.Random prng = new System.Random(noiseConfigData.seed);
+            NativeArray<Vector2> octaveOffsets = new NativeArray<Vector2>(noiseConfigData.octaves, Allocator.Persistent);
+            for (int i = 0; i < noiseConfigData.octaves; i++)
             {
-                float offsetX = prng.Next(-100000, 100000) + offset.x;
-                float offsetY = prng.Next(-100000, 100000) - offset.y;
+                float offsetX = prng.Next(-100000, 100000) + noiseConfigData.offset.x;
+                float offsetY = prng.Next(-100000, 100000) - noiseConfigData.offset.y;
                 octaveOffsets[i] = new Vector2(offsetX, offsetY);
             }
 
+            float scale = terrainData.noiseScale;
             if (scale <= 0)
             {
                 scale = 0.0001f;
@@ -30,9 +31,9 @@ namespace ProcudualGenerator
                 mapWidth = mapWidth,
                 mapHeight = mapHeight,
                 scale = scale,
-                octaves = octaves,
-                persistance = persistance,
-                lacunarity = lacunarity,
+                octaves = noiseConfigData.octaves,
+                persistance = noiseConfigData.persistance,
+                lacunarity = noiseConfigData.lacunarity,
                 noiseMap = noiseMap,
                 octaveOffsets = octaveOffsets
             };

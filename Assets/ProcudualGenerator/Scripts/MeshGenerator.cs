@@ -8,7 +8,7 @@ namespace ProcudualGenerator
 {
     public static class MeshGenerator
     {
-        public static Mesh GenerateTerrainMesh(NativeArray<float> heightMap, NativeArray<Color> colourMap, float heightMultiplier, int borderedSize, AnimationCurve heightCurve, int levelOfDetail)
+        public static Mesh GenerateTerrainMesh(NativeArray<float> heightMap, NativeArray<Color> colourMap, TerrainData terrainData, int borderedSize, int levelOfDetail)
         {
             int meshSize = borderedSize - 2;
             int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
@@ -39,7 +39,7 @@ namespace ProcudualGenerator
 
             for (int i = 0; i < borderedSize * borderedSize; i++)
             {
-                heightCurveMap[i] = heightCurve.Evaluate(heightMap[i]);
+                heightCurveMap[i] = terrainData.meshHeightCurve.Evaluate(heightMap[i]);
             }
 
             NativeArray<int> vertexIndexesMap = new NativeArray<int>(borderedSize * borderedSize, Allocator.TempJob);
@@ -47,7 +47,7 @@ namespace ProcudualGenerator
             MeshGeneratorJob meshGeneratorJob = new MeshGeneratorJob()
             {
                 heightMap = heightMap,
-                heightMultiplier = heightMultiplier,
+                heightMultiplier = terrainData.meshHeightMultiplier,
                 borderedSize = borderedSize,
                 meshSize = meshSize,
                 heightCurve = heightCurveMap,
@@ -263,6 +263,8 @@ namespace ProcudualGenerator
 
             mesh.SetIndexBufferParams(triangles.Length, IndexFormat.UInt32);
             mesh.SetIndexBufferData(triangles, 0, 0, triangles.Length);
+
+            mesh.SetUVs(0, uvs);
 
             mesh.subMeshCount = 1;
             var descriptor = new SubMeshDescriptor(0, triangles.Length, MeshTopology.Triangles);
