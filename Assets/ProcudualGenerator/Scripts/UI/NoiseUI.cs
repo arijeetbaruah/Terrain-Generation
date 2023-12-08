@@ -15,7 +15,7 @@ public class NoiseUI : MonoBehaviour
     [SerializeField] private NoiseData data;
     [SerializeField] private MapGenerator mapGenerator;
 
-    private void Start()
+    private void Awake()
     {
         octaves.text = data.Data.octaves.ToString();
         lacunarity.text = data.Data.lacunarity.ToString();
@@ -53,13 +53,13 @@ public class NoiseUI : MonoBehaviour
 
         offsetX.onValueChanged.AddListener(val =>
         {
-            data.Data.persistance = float.Parse(val);
+            data.Data.offset.x = float.Parse(val);
             mapGenerator.GenerateMap();
         });
 
         offsetY.onValueChanged.AddListener(val =>
         {
-            data.Data.persistance = float.Parse(val);
+            data.Data.offset.y = float.Parse(val);
             mapGenerator.GenerateMap();
         });
     }
