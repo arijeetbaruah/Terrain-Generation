@@ -33,7 +33,7 @@ namespace ProcudualGenerator
         [Button]
         public void GenerateMap()
         {
-            if (falloffMap == null)
+            if (falloffMap == null || falloffMap.Length == 0)
             {
                 falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
             }
@@ -63,7 +63,28 @@ namespace ProcudualGenerator
                 }
             }
 
-            regions.UpdateMeshHeights(material, terrainConfig.Data.minHeight, terrainConfig.Data.maxHeight);
+            float samples = 64;
+
+            Gradient gradient = new Gradient();
+            gradient.colorSpace = ColorSpace.Linear;
+            gradient.colorKeys = regions.Data.Select(r => new GradientColorKey
+            {
+                time = r.height,
+                color = r.colour
+            }).ToArray();
+
+            Texture2D colorMapTex = new Texture2D((int)samples, 1);
+            colorMapTex.filterMode = FilterMode.Bilinear;
+            colorMapTex.wrapMode = TextureWrapMode.Repeat;
+
+            for (int i = 0; i < samples; i++)
+            {
+                colorMapTex.SetPixel(i, 0, gradient.Evaluate(i / samples)); // INT BY INT IS AN INT SO ITS GOING 0 FUCK MY LIFE
+            }
+
+            colorMapTex.Apply();
+
+            regions.UpdateMeshHeights(material, colorMapTex, terrainConfig.Data.minHeight, terrainConfig.Data.maxHeight);
 
             NativeArray<Color> colourMap = new NativeArray<Color>(mapChunkSize * mapChunkSize, Allocator.TempJob);
 
