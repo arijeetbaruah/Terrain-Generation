@@ -7,10 +7,8 @@ namespace ProcudualGenerator
 {
     public static class Noise
     {
-        public static NativeArray<float> GenerateNoiseMap(int mapWidth, int mapHeight, NoiseConfigData noiseConfigData, TerrainData terrainData)
+        public static void GenerateNoiseMap(int mapWidth, int mapHeight, NoiseConfigData noiseConfigData, TerrainData terrainData, NativeArray<float> noiseMap)
         {
-            NativeArray<float> noiseMap = new NativeArray<float>(mapWidth * mapHeight, Allocator.Persistent);
-
             System.Random prng = new System.Random(noiseConfigData.seed);
             NativeArray<Vector2> octaveOffsets = new NativeArray<Vector2>(noiseConfigData.octaves, Allocator.Persistent);
             for (int i = 0; i < noiseConfigData.octaves; i++)
@@ -42,8 +40,6 @@ namespace ProcudualGenerator
             jobHandle.Complete();
 
             octaveOffsets.Dispose();
-
-            return noiseMap;
         }
     }
 

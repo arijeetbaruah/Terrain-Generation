@@ -3,6 +3,12 @@ using UnityEngine;
 
 namespace ProcudualGenerator
 {
+    public enum TextureType
+    {
+        Colour,
+        Texture
+    };
+
     public class NoiseData : BaseSingleConfig<NoiseConfigData, TerrainRegion>
     {
         protected override void OnValidate()
@@ -31,6 +37,7 @@ namespace ProcudualGenerator
         public float lacunarity;
 
         public int seed;
+        public TextureType textureType;
         public Vector2 offset;
     }
 }

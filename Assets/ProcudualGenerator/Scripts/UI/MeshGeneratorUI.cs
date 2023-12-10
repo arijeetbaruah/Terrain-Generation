@@ -1,4 +1,6 @@
 using ProcudualGenerator;
+using System;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,8 +10,10 @@ public class MeshGeneratorUI : MonoBehaviour
     [SerializeField] private TMP_InputField noiseScale;
     [SerializeField] private TMP_InputField heightMultiplier;
     [SerializeField] private Toggle useFallout;
+    [SerializeField] private TMP_Dropdown terrainTypeDropdown;
 
     [SerializeField] private TerrainConfig data;
+    [SerializeField] private NoiseData noiseData;
     [SerializeField] private MapGenerator mapGenerator;
 
     private void Awake()
@@ -17,6 +21,11 @@ public class MeshGeneratorUI : MonoBehaviour
         noiseScale.text = data.Data.noiseScale.ToString();
         heightMultiplier.text = data.Data.meshHeightMultiplier.ToString();
         useFallout.isOn = data.Data.useFalloff;
+
+        var options = Enum.GetNames(typeof(TextureType)).ToList();
+        terrainTypeDropdown.ClearOptions();
+        terrainTypeDropdown.AddOptions(options);
+        terrainTypeDropdown.value = options.IndexOf(noiseData.Data.textureType.ToString());
     }
 
     private void OnEnable()
@@ -36,6 +45,12 @@ public class MeshGeneratorUI : MonoBehaviour
         useFallout.onValueChanged.AddListener(val =>
         {
             data.Data.useFalloff = val;
+            mapGenerator.GenerateMap();
+        });
+
+        terrainTypeDropdown.onValueChanged.AddListener(val =>
+        {
+            noiseData.Data.textureType = (TextureType)val;
             mapGenerator.GenerateMap();
         });
     }

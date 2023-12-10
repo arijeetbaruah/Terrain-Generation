@@ -16,57 +16,59 @@ MonoBehaviour:
   data:
   - name: Deep Water
     height: 0
-    colour: {r: 0, g: 0.17953014, b: 1, a: 0}
+    colour: {r: 1, g: 1, b: 0, a: 0}
+    texture: {fileID: 2800000, guid: 4a77b0ead30ef97459561956a2594682, type: 3}
+    normal: {fileID: 2800000, guid: 536402406aa161342b88883c997f4ae5, type: 3}
+    occlusion: {fileID: 2800000, guid: 98b2be249e0a3f84eadf8cb1bc6c180c, type: 3}
+    gloss: {fileID: 2800000, guid: f718ef9654a0b504196d7281552f3ec3, type: 3}
   - name: Shallow Water
     height: 0.3
-    colour: {r: 0, g: 1, b: 1, a: 0}
+    colour: {r: 1, g: 1, b: 0, a: 0}
+    texture: {fileID: 2800000, guid: 4a77b0ead30ef97459561956a2594682, type: 3}
+    normal: {fileID: 2800000, guid: 536402406aa161342b88883c997f4ae5, type: 3}
+    occlusion: {fileID: 2800000, guid: 98b2be249e0a3f84eadf8cb1bc6c180c, type: 3}
+    gloss: {fileID: 2800000, guid: f718ef9654a0b504196d7281552f3ec3, type: 3}
   - name: Sand
     height: 0.4
     colour: {r: 1, g: 1, b: 0, a: 0}
+    texture: {fileID: 2800000, guid: 4a77b0ead30ef97459561956a2594682, type: 3}
+    normal: {fileID: 2800000, guid: 536402406aa161342b88883c997f4ae5, type: 3}
+    occlusion: {fileID: 2800000, guid: 98b2be249e0a3f84eadf8cb1bc6c180c, type: 3}
+    gloss: {fileID: 2800000, guid: f718ef9654a0b504196d7281552f3ec3, type: 3}
   - name: Grass
     height: 0.55
     colour: {r: 0.048891068, g: 1, b: 0, a: 0}
+    texture: {fileID: 2800000, guid: b07ba875bab737f469f3e51a71fc5c9e, type: 3}
+    normal: {fileID: 2800000, guid: 699ff2f40c5e4374c83c49e02a8df76b, type: 3}
+    occlusion: {fileID: 2800000, guid: d3d3dc58203797d4894dcc16afb6f727, type: 3}
+    gloss: {fileID: 2800000, guid: 699c60c2969ebf24182a1687bac5e72a, type: 3}
   - name: Grass 2
     height: 0.6
     colour: {r: 0, g: 0.6392157, b: 0, a: 0}
+    texture: {fileID: 2800000, guid: b07ba875bab737f469f3e51a71fc5c9e, type: 3}
+    normal: {fileID: 2800000, guid: 699ff2f40c5e4374c83c49e02a8df76b, type: 3}
+    occlusion: {fileID: 2800000, guid: d3d3dc58203797d4894dcc16afb6f727, type: 3}
+    gloss: {fileID: 2800000, guid: 699c60c2969ebf24182a1687bac5e72a, type: 3}
   - name: Rock 1
     height: 0.75
     colour: {r: 0.38679248, g: 0.28279638, b: 0.28279638, a: 0}
+    texture: {fileID: 2800000, guid: e725078fd17fda7409c3e25c443f04bb, type: 3}
+    normal: {fileID: 2800000, guid: 276efc9f777bb504581e96bab10bc0de, type: 3}
+    occlusion: {fileID: 2800000, guid: 044f8ea2f602801449170cbc0462fc43, type: 3}
+    gloss: {fileID: 2800000, guid: d81d2bcca48eb9f40a1c64b91917abb9, type: 3}
   - name: Rock 2
     height: 0.8
     colour: {r: 0.3018868, g: 0.10964756, b: 0.10964756, a: 0}
+    texture: {fileID: 2800000, guid: e725078fd17fda7409c3e25c443f04bb, type: 3}
+    normal: {fileID: 2800000, guid: 276efc9f777bb504581e96bab10bc0de, type: 3}
+    occlusion: {fileID: 2800000, guid: 044f8ea2f602801449170cbc0462fc43, type: 3}
+    gloss: {fileID: 2800000, guid: d81d2bcca48eb9f40a1c64b91917abb9, type: 3}
   - name: Snow
     height: 0.9
     colour: {r: 1, g: 1, b: 1, a: 0}
+    texture: {fileID: 2800000, guid: 98b2be249e0a3f84eadf8cb1bc6c180c, type: 3}
+    normal: {fileID: 2800000, guid: 536402406aa161342b88883c997f4ae5, type: 3}
+    occlusion: {fileID: 2800000, guid: 98b2be249e0a3f84eadf8cb1bc6c180c, type: 3}
+    gloss: {fileID: 2800000, guid: f718ef9654a0b504196d7281552f3ec3, type: 3}
   savedMinHeight: 0
   savedMaxHeight: 3060.61
-  terrainGradiant:
-    serializedVersion: 2
-    key0: {r: 1, g: 0, b: 0, a: 1}
-    key1: {r: 1, g: 1, b: 1, a: 1}
-    key2: {r: 0, g: 0, b: 0, a: 0}
-    key3: {r: 0, g: 0, b: 0, a: 0}
-    key4: {r: 0, g: 0, b: 0, a: 0}
-    key5: {r: 0, g: 0, b: 0, a: 0}
-    key6: {r: 0, g: 0, b: 0, a: 0}
-    key7: {r: 0, g: 0, b: 0, a: 0}
-    ctime0: 0
-    ctime1: 65535
-    ctime2: 0
-    ctime3: 0
-    ctime4: 0
-    ctime5: 0
-    ctime6: 0
-    ctime7: 0
-    atime0: 0
-    atime1: 65535
-    atime2: 0
-    atime3: 0
-    atime4: 0
-    atime5: 0
-    atime6: 0
-    atime7: 0
-    m_Mode: 0
-    m_ColorSpace: 0
-    m_NumColorKeys: 2
-    m_NumAlphaKeys: 2

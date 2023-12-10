@@ -14,8 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   autoUpdate: 1
   data:
-    octaves: 14
+    octaves: 4
     persistance: 0.5
     lacunarity: 2
-    seed: 214
+    seed: 733
+    textureType: 1
     offset: {x: 0, y: 0}

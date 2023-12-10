@@ -1,4 +1,5 @@
 using Sirenix.OdinInspector;
+using System.Collections;
 using System.Linq;
 using Unity.Burst;
 using Unity.Collections;
@@ -15,7 +16,9 @@ namespace ProcudualGenerator
         public int levelOfDetail;
 
         [SerializeField] private ConfigRegistry configRegistry;
-        [SerializeField] private Material material;
+        [SerializeField] private MeshRenderer meshRenderer;
+        [SerializeField] private Material terrainMaterial;
+        [SerializeField] private Material colourMaterial;
 
         private float[] falloffMap;
         private TerrainRegion regions;
@@ -24,9 +27,17 @@ namespace ProcudualGenerator
 
         public bool autoUpdate;
 
+        private Material material => noiseData.Data.textureType == TextureType.Colour ? colourMaterial : terrainMaterial;
+
         void Awake()
         {
+            meshRenderer.gameObject.SetActive(false);
             falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+        }
+
+        private IEnumerator Start()
+        {
+            yield return new WaitForSeconds(2);
             GenerateMap();
         }
 
@@ -38,22 +49,26 @@ namespace ProcudualGenerator
                 falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
             }
 
-            if (noiseData == null && configRegistry.TryGetValue<NoiseData>(out noiseData))
+            if (noiseData == null)
             {
-                return;
+                configRegistry.TryGetValue<NoiseData>(out noiseData);
             }
 
-            if (regions == null && configRegistry.TryGetValue<TerrainRegion>(out regions))
+            if (regions == null)
             {
-                return;
+                configRegistry.TryGetValue<TerrainRegion>(out regions);
             }
 
-            if (terrainConfig == null && configRegistry.TryGetValue<TerrainConfig>(out terrainConfig))
+            if (terrainConfig == null)
             {
-                return;
+                configRegistry.TryGetValue<TerrainConfig>(out terrainConfig);
             }
 
-            NativeArray<float> noiseMap = Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, noiseData.Data, terrainConfig.Data);
+            meshRenderer.material = material;
+
+            NativeArray<float> noiseMap = new NativeArray<float>(mapChunkSize * mapChunkSize, Allocator.Persistent);
+
+            Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, noiseData.Data, terrainConfig.Data, noiseMap);
 
             for (int x = 0; x < noiseMap.Length; x++)
             {
@@ -84,7 +99,16 @@ namespace ProcudualGenerator
 
             colorMapTex.Apply();
 
-            regions.UpdateMeshHeights(material, colorMapTex, terrainConfig.Data.minHeight, terrainConfig.Data.maxHeight);
+            TextureData textureData = new TextureData()
+            {
+                baseTexturesMap = regions.Data.Where(r => r != null).Select(r => r.texture).ToArray(),
+                normalTexturesMap = regions.Data.Where(r => r != null).Select(r => r.normal).ToArray(),
+                occlusionMap = regions.Data.Where(r => r != null).Select(r => r.occlusion).ToArray(),
+                glossMap = regions.Data.Where(r => r != null).Select(r => r.gloss).ToArray()
+            };
+            meshRenderer.gameObject.SetActive(true);
+
+            regions.UpdateMeshHeights(material, colorMapTex, textureData, terrainConfig.Data.minHeight, terrainConfig.Data.maxHeight);
 
             NativeArray<Color> colourMap = new NativeArray<Color>(mapChunkSize * mapChunkSize, Allocator.TempJob);
 

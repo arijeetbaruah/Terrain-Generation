@@ -70,6 +70,7 @@ namespace ProcudualGenerator
             borderVertices.Dispose();
             heightCurveMap.Dispose();
             bakedNormals.Dispose();
+            vertexIndexesMap.Dispose();
 
             return mesh;
         }

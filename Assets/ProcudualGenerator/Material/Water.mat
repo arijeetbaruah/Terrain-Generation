@@ -113,6 +113,7 @@ Material:
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
+    - _Fresnel_Power: 7
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _Glossness: 0.71
@@ -136,5 +137,9 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Ripple_Colour: {r: 0.09019608, g: 0.1764706, b: 0.15294118, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
+    - _Water_Colour: {r: 0.19215685, g: 0.30980387, b: 0.33725488, a: 1}
+    - _Water_Colour_1: {r: 0.19215685, g: 0.30980387, b: 0.33725488, a: 1}
+    - _Water_Colour_2: {r: 0.19215685, g: 0.30980387, b: 0.33725488, a: 1}
   m_BuildTextureStacks: []
