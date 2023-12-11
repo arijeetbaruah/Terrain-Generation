@@ -8,27 +8,27 @@ namespace ProcudualGenerator
 {
     public static class MeshGenerator
     {
+        public static Mesh mesh;
+
         public static Mesh GenerateTerrainMesh(NativeArray<float> heightMap, NativeArray<Color> colourMap, TerrainData terrainData, int borderedSize, int levelOfDetail)
         {
-            int meshSize = borderedSize - 2;
+            if (MeshGenerator.mesh == null)
+            {
+                mesh = new Mesh();
+            }
+
             int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
-            int verticesPerLine = (meshSize - 1) / meshSimplificationIncrement + 1;
+            int verticesPerLine = (borderedSize - 1) / meshSimplificationIncrement + 1;
 
             NativeArray<Vector3> vertices = new NativeArray<Vector3>(verticesPerLine * verticesPerLine, Allocator.TempJob);
             NativeArray<Vector2> uvs = new NativeArray<Vector2>(verticesPerLine * verticesPerLine, Allocator.TempJob);
             NativeArray<int> triangles = new NativeArray<int>((verticesPerLine - 1) * (verticesPerLine - 1) * 6, Allocator.TempJob);
 
-            NativeArray<int> borderTriangle = new NativeArray<int>(24 * verticesPerLine, Allocator.TempJob);
-            NativeArray<Vector3> borderVertices = new NativeArray<Vector3>(verticesPerLine * 4 + 4, Allocator.TempJob);
-
             MeshJobData meshJobData = new MeshJobData()
             {
                 triangles = triangles,
                 vertices = vertices,
-                uvs = uvs,
-
-                borderTriangle = borderTriangle,
-                borderVertices = borderVertices
+                uvs = uvs
             };
 
             NativeArray<float> heightCurveMap = new NativeArray<float>(borderedSize * borderedSize, Allocator.TempJob);
@@ -38,34 +38,27 @@ namespace ProcudualGenerator
                 heightCurveMap[i] = terrainData.meshHeightCurve.Evaluate(heightMap[i]);
             }
 
-            NativeArray<int> vertexIndexesMap = new NativeArray<int>(borderedSize * borderedSize, Allocator.TempJob);
-
             MeshGeneratorJob meshGeneratorJob = new MeshGeneratorJob()
             {
                 heightMap = heightMap,
                 heightMultiplier = terrainData.meshHeightMultiplier,
                 borderedSize = borderedSize,
-                meshSize = meshSize,
                 heightCurve = heightCurveMap,
                 levelOfDetail = levelOfDetail,
                 meshSimplificationIncrement = meshSimplificationIncrement,
                 verticesPerLine = verticesPerLine,
                 meshData = meshJobData,
-                vertexIndexesMap = vertexIndexesMap,
             };
 
             JobHandle jobHandle = meshGeneratorJob.Schedule();
 
             jobHandle.Complete();
-            Mesh mesh = meshGeneratorJob.meshData.CreateMesh(colourMap);
+            meshGeneratorJob.meshData.CreateMesh(colourMap, ref mesh);
 
             vertices.Dispose();
             uvs.Dispose();
             triangles.Dispose();
-            borderTriangle.Dispose();
-            borderVertices.Dispose();
             heightCurveMap.Dispose();
-            vertexIndexesMap.Dispose();
 
             return mesh;
         }
@@ -77,73 +70,33 @@ namespace ProcudualGenerator
         [ReadOnly] public NativeArray<float> heightMap;
         [ReadOnly] public float heightMultiplier;
         [ReadOnly] public int borderedSize;
-        [ReadOnly] public int meshSize;
         [ReadOnly] public NativeArray<float> heightCurve;
         [ReadOnly] public int levelOfDetail;
         [ReadOnly] public int meshSimplificationIncrement;
         [ReadOnly] public int verticesPerLine;
 
         public MeshJobData meshData;
-        public NativeArray<int> vertexIndexesMap;
 
         public void Execute()
         {
-            int meshSizeUnsimplified = borderedSize - 2;
-
-            float topLeftX = (meshSizeUnsimplified - 1) / -2f;
-            float topLeftZ = (meshSizeUnsimplified - 1) / 2f;
-
-            int meshVertexIndex = 0;
-            int borderVertexIndex = -1;
+            float topLeftX = (borderedSize - 1) / -2f;
+            float topLeftZ = (borderedSize - 1) / 2f;
 
             for (int y = 0; y < borderedSize; y += meshSimplificationIncrement)
             {
                 for (int x = 0; x < borderedSize; x += meshSimplificationIncrement)
                 {
-                    bool isBorderVertex = y == 0 || y == borderedSize - 1 || x == 0 || x == borderedSize - 1;
+                    int vertexIndex = y * borderedSize + x;
+                    meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightCurve[x * borderedSize + y] * heightMultiplier, topLeftZ - y);
+                    meshData.uvs[vertexIndex] = new Vector2(x / (float)borderedSize, y / (float)borderedSize);
 
-                    if (isBorderVertex)
+                    if (x < borderedSize - 1 && y < borderedSize - 1)
                     {
-                        vertexIndexesMap[x * borderedSize + y] = borderVertexIndex;
-                        borderVertexIndex--;
-                    }
-                    else
-                    {
-                        vertexIndexesMap[x * borderedSize + y] = meshVertexIndex;
-                        meshVertexIndex++;
+                        meshData.AddTriangle(vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
+                        meshData.AddTriangle(vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
                     }
                 }
             }
-
-            for (int y = 0; y < borderedSize; y += meshSimplificationIncrement)
-            {
-                for (int x = 0; x < borderedSize; x += meshSimplificationIncrement)
-                {
-                    int vertexIndex = GetVertexIndex(x, y);
-                    Vector2 percent = new Vector2((x - meshSimplificationIncrement) / (float)meshSize, (y - meshSimplificationIncrement) / (float)meshSize);
-                    float height = heightCurve[y * borderedSize + x] * heightMultiplier;
-                    Vector3 vertexPosition = new Vector3(topLeftX + percent.x * meshSizeUnsimplified, height, topLeftZ - percent.y * meshSizeUnsimplified);
-
-                    meshData.AddVertex(vertexPosition, percent, vertexIndex);
-
-                    if (x < borderedSize - meshSimplificationIncrement && y < borderedSize - meshSimplificationIncrement)
-                    {
-                        int a = GetVertexIndex(x, y);
-                        int b = GetVertexIndex(x + meshSimplificationIncrement, y);
-                        int c = GetVertexIndex(x, y + meshSimplificationIncrement);
-                        int d = GetVertexIndex(x + meshSimplificationIncrement, y + meshSimplificationIncrement);
-                        meshData.AddTriangle(a, d, c);
-                        meshData.AddTriangle(d, a, b);
-                    }
-
-                    vertexIndex++;
-                }
-            }
-        }
-
-        private int GetVertexIndex(int x, int y)
-        {
-            return vertexIndexesMap[x * borderedSize + y];
         }
     }
 
@@ -153,46 +106,19 @@ namespace ProcudualGenerator
         public NativeArray<int> triangles;
         public NativeArray<Vector2> uvs;
 
-        public NativeArray<Vector3> borderVertices;
-        public NativeArray<int> borderTriangle;
-
         private int triangleIndex;
-        private int borderTriangleIndex;
-
-        public void AddVertex(Vector3 vertexPosition, Vector2 uv, int vertexIndex)
-        {
-            if (vertexIndex < 0)
-            {
-                borderVertices[-vertexIndex - 1] = vertexPosition;
-            }
-            else
-            {
-                vertices[vertexIndex] = vertexPosition;
-                uvs[vertexIndex] = uv;
-            }
-        }
 
         public void AddTriangle(int a, int b, int c)
         {
-            if (a < 0 || b < 0 || c < 0)
-            {
-                borderTriangle[borderTriangleIndex] = a;
-                borderTriangle[borderTriangleIndex + 1] = b;
-                borderTriangle[borderTriangleIndex + 2] = c;
-                borderTriangleIndex += 3;
-            }
-            else
-            {
-                triangles[triangleIndex] = a;
-                triangles[triangleIndex + 1] = b;
-                triangles[triangleIndex + 2] = c;
-                triangleIndex += 3;
-            }
+            triangles[triangleIndex] = a;
+            triangles[triangleIndex + 1] = b;
+            triangles[triangleIndex + 2] = c;
+            triangleIndex += 3;
         }
 
-        public Mesh CreateMesh(NativeArray<Color> colourMap)
+        public void CreateMesh(NativeArray<Color> colourMap, ref Mesh mesh)
         {
-            Mesh mesh = new Mesh();
+            mesh.Clear();
 
             mesh.SetVertexBufferParams(vertices.Length, new VertexAttributeDescriptor(VertexAttribute.Position));
             mesh.SetVertexBufferData(vertices, 0, 0, vertices.Length);
@@ -209,8 +135,6 @@ namespace ProcudualGenerator
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
             mesh.RecalculateTangents();
-
-            return mesh;
         }
     }
 }
