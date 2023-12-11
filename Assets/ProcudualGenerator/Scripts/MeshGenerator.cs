@@ -21,15 +21,11 @@ namespace ProcudualGenerator
             NativeArray<int> borderTriangle = new NativeArray<int>(24 * verticesPerLine, Allocator.TempJob);
             NativeArray<Vector3> borderVertices = new NativeArray<Vector3>(verticesPerLine * 4 + 4, Allocator.TempJob);
 
-            NativeArray<Vector3> bakedNormals = new NativeArray<Vector3>(vertices.Length, Allocator.TempJob);
-
             MeshJobData meshJobData = new MeshJobData()
             {
                 triangles = triangles,
                 vertices = vertices,
                 uvs = uvs,
-
-                bakedNormals = bakedNormals,
 
                 borderTriangle = borderTriangle,
                 borderVertices = borderVertices
@@ -69,7 +65,6 @@ namespace ProcudualGenerator
             borderTriangle.Dispose();
             borderVertices.Dispose();
             heightCurveMap.Dispose();
-            bakedNormals.Dispose();
             vertexIndexesMap.Dispose();
 
             return mesh;
@@ -164,8 +159,6 @@ namespace ProcudualGenerator
         private int triangleIndex;
         private int borderTriangleIndex;
 
-        public NativeArray<Vector3> bakedNormals;
-
         public void AddVertex(Vector3 vertexPosition, Vector2 uv, int vertexIndex)
         {
             if (vertexIndex < 0)
@@ -195,64 +188,6 @@ namespace ProcudualGenerator
                 triangles[triangleIndex + 2] = c;
                 triangleIndex += 3;
             }
-
-        }
-
-        public void BakeNormals()
-        {
-            int triangelCount = triangles.Length / 3;
-
-            for (int i = 0; i < triangelCount; i++)
-            {
-                int normalTriangleIndex = i * 3;
-                int vertexIndexA = triangles[normalTriangleIndex];
-                int vertexIndexB = triangles[normalTriangleIndex + 1];
-                int vertexIndexC = triangles[normalTriangleIndex + 2];
-
-                Vector3 triangleNormal = SurfaceNormalFromIndex(vertexIndexA, vertexIndexB, vertexIndexC);
-                bakedNormals[vertexIndexA] += triangleNormal;
-                bakedNormals[vertexIndexB] += triangleNormal;
-                bakedNormals[vertexIndexC] += triangleNormal;
-            }
-
-            int borderTriangelCount = borderTriangle.Length / 3;
-            for (int i = 0; i < borderTriangelCount; i++)
-            {
-                int normalTriangleIndex = i * 3;
-                int vertexIndexA = borderTriangle[normalTriangleIndex];
-                int vertexIndexB = borderTriangle[normalTriangleIndex + 1];
-                int vertexIndexC = borderTriangle[normalTriangleIndex + 2];
-
-                Vector3 triangleNormal = SurfaceNormalFromIndex(vertexIndexA, vertexIndexB, vertexIndexC);
-                if (vertexIndexA >= 0)
-                {
-                    bakedNormals[vertexIndexA] += triangleNormal;
-                }
-                if (vertexIndexB >= 0)
-                {
-                    bakedNormals[vertexIndexB] += triangleNormal;
-                }
-                if (vertexIndexC >= 0)
-                {
-                    bakedNormals[vertexIndexC] += triangleNormal;
-                }
-            }
-
-            for (int i = 0; i < bakedNormals.Length; i++)
-            {
-                bakedNormals[i].Normalize();
-            }
-        }
-
-        public Vector3 SurfaceNormalFromIndex(int indexA, int indexB, int indexC)
-        {
-            Vector3 pointA = (indexA < 0) ? borderVertices[-indexA - 1] : vertices[indexA];
-            Vector3 pointB = (indexB < 0) ? borderVertices[-indexB - 1] : vertices[indexB];
-            Vector3 pointC = (indexC < 0) ? borderVertices[-indexC - 1] : vertices[indexC];
-
-            Vector3 sideAB = pointB - pointA;
-            Vector3 sideAC = pointC - pointA;
-            return Vector3.Cross(sideAB, sideAC).normalized;
         }
 
         public Mesh CreateMesh(NativeArray<Color> colourMap)
