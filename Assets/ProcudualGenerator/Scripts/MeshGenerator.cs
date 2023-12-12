@@ -20,9 +20,9 @@ namespace ProcudualGenerator
             int meshSimplificationIncrement = (levelOfDetail == 0) ? 1 : levelOfDetail * 2;
             int verticesPerLine = (borderedSize - 1) / meshSimplificationIncrement + 1;
 
-            NativeArray<Vector3> vertices = new NativeArray<Vector3>(verticesPerLine * verticesPerLine, Allocator.TempJob);
-            NativeArray<Vector2> uvs = new NativeArray<Vector2>(verticesPerLine * verticesPerLine, Allocator.TempJob);
-            NativeArray<int> triangles = new NativeArray<int>((verticesPerLine - 1) * (verticesPerLine - 1) * 6, Allocator.TempJob);
+            NativeArray<Vector3> vertices = new NativeArray<Vector3>(borderedSize * borderedSize, Allocator.TempJob);
+            NativeArray<Vector2> uvs = new NativeArray<Vector2>(borderedSize * borderedSize, Allocator.TempJob);
+            NativeArray<int> triangles = new NativeArray<int>((borderedSize - 1) * (borderedSize - 1) * 6, Allocator.TempJob);
 
             MeshJobData meshJobData = new MeshJobData()
             {
@@ -50,7 +50,7 @@ namespace ProcudualGenerator
                 meshData = meshJobData,
             };
 
-            JobHandle jobHandle = meshGeneratorJob.Schedule();
+            JobHandle jobHandle = meshGeneratorJob.Schedule(heightMap.Length, meshSimplificationIncrement);
 
             jobHandle.Complete();
             meshGeneratorJob.meshData.CreateMesh(colourMap, ref mesh);
@@ -65,7 +65,7 @@ namespace ProcudualGenerator
     }
 
     [BurstCompile]
-    public struct MeshGeneratorJob : IJob
+    public struct MeshGeneratorJob : IJobParallelFor
     {
         [ReadOnly] public NativeArray<float> heightMap;
         [ReadOnly] public float heightMultiplier;
@@ -77,35 +77,34 @@ namespace ProcudualGenerator
 
         public MeshJobData meshData;
 
-        public void Execute()
+        public void Execute(int index)
         {
             float topLeftX = (borderedSize - 1) / -2f;
             float topLeftZ = (borderedSize - 1) / 2f;
 
+            int x = index / borderedSize;
+            int y = index % borderedSize;
+            int triangleIndex = index * 6;
 
-            for (int index = 0; index < borderedSize * borderedSize; index += meshSimplificationIncrement)
+            int vertexIndex = y * borderedSize + x;
+            meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightCurve[x * borderedSize + y] * heightMultiplier, topLeftZ - y);
+            meshData.uvs[vertexIndex] = new Vector2(x / (float)borderedSize, y / (float)borderedSize);
+
+            if (x < borderedSize - 6 && y < borderedSize - 6)
             {
-                int x = index / borderedSize;
-                int y = index % borderedSize;
-                int triangleIndex = index * 6;
-
-                int vertexIndex = y * borderedSize + x;
-                meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightCurve[x * borderedSize + y] * heightMultiplier, topLeftZ - y);
-                meshData.uvs[vertexIndex] = new Vector2(x / (float)borderedSize, y / (float)borderedSize);
-
-                if (x < borderedSize - 1 && y < borderedSize - 1)
-                {
-                    meshData.AddTriangle(triangleIndex, vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
-                    meshData.AddTriangle(triangleIndex + 3, vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
-                }
+                meshData.AddTriangle(triangleIndex, vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
+                meshData.AddTriangle(triangleIndex + 3, vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
             }
         }
     }
 
     public struct MeshJobData
     {
+        [NativeDisableParallelForRestriction]
         public NativeArray<Vector3> vertices;
+        [NativeDisableParallelForRestriction]
         public NativeArray<int> triangles;
+        [NativeDisableParallelForRestriction]
         public NativeArray<Vector2> uvs;
 
         public void AddTriangle(int triangleIndex, int a, int b, int c)
