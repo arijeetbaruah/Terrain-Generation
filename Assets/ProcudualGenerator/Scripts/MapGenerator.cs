@@ -10,7 +10,7 @@ namespace ProcudualGenerator
 {
     public class MapGenerator : MonoBehaviour
     {
-        public const int mapChunkSize = 239;
+        public const int mapChunkSize = 256;
 
         [PropertyRange(0, 6)]
         public int levelOfDetail;
