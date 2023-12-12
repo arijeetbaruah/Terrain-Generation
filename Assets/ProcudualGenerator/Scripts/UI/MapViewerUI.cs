@@ -8,14 +8,19 @@ public class MapViewerUI : MonoBehaviour
 
     private void Awake()
     {
-        rotationSpeed.text = cameraRotator.cameraRotationDuration.ToString();
+        rotationSpeed.text = (1f / cameraRotator.cameraRotationDuration).ToString();
     }
 
     private void OnEnable()
     {
         rotationSpeed.onValueChanged.AddListener(val =>
         {
-            cameraRotator.UpdateDuration(float.Parse(val));
+            if (string.IsNullOrEmpty(val))
+            {
+                cameraRotator.UpdateDuration(0);
+                return;
+            }
+            cameraRotator.UpdateDuration(1 / float.Parse(val));
         });
     }
 }
