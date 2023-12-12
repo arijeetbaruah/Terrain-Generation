@@ -68,7 +68,7 @@ namespace ProcudualGenerator
 
             NativeArray<float> noiseMap = new NativeArray<float>(mapChunkSize * mapChunkSize, Allocator.Persistent);
 
-            Noise.GenerateNoiseMap(mapChunkSize, mapChunkSize, noiseData.Data, terrainConfig.Data, noiseMap);
+            Noise.GenerateNoiseMap(mapChunkSize, noiseData.Data, terrainConfig.Data, noiseMap);
 
             for (int x = 0; x < noiseMap.Length; x++)
             {
