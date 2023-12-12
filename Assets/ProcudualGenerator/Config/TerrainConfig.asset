@@ -15,7 +15,7 @@ MonoBehaviour:
   autoUpdate: 1
   data:
     noiseScale: 48.99
-    meshHeightMultiplier: 3195.9
+    meshHeightMultiplier: 3223.42
     meshHeightCurve:
       serializedVersion: 2
       m_Curve:

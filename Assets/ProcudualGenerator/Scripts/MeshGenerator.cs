@@ -82,19 +82,21 @@ namespace ProcudualGenerator
             float topLeftX = (borderedSize - 1) / -2f;
             float topLeftZ = (borderedSize - 1) / 2f;
 
-            for (int y = 0; y < borderedSize; y += meshSimplificationIncrement)
-            {
-                for (int x = 0; x < borderedSize; x += meshSimplificationIncrement)
-                {
-                    int vertexIndex = y * borderedSize + x;
-                    meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightCurve[x * borderedSize + y] * heightMultiplier, topLeftZ - y);
-                    meshData.uvs[vertexIndex] = new Vector2(x / (float)borderedSize, y / (float)borderedSize);
 
-                    if (x < borderedSize - 1 && y < borderedSize - 1)
-                    {
-                        meshData.AddTriangle(vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
-                        meshData.AddTriangle(vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
-                    }
+            for (int index = 0; index < borderedSize * borderedSize; index += meshSimplificationIncrement)
+            {
+                int x = index / borderedSize;
+                int y = index % borderedSize;
+                int triangleIndex = index * 6;
+
+                int vertexIndex = y * borderedSize + x;
+                meshData.vertices[vertexIndex] = new Vector3(topLeftX + x, heightCurve[x * borderedSize + y] * heightMultiplier, topLeftZ - y);
+                meshData.uvs[vertexIndex] = new Vector2(x / (float)borderedSize, y / (float)borderedSize);
+
+                if (x < borderedSize - 1 && y < borderedSize - 1)
+                {
+                    meshData.AddTriangle(triangleIndex, vertexIndex, vertexIndex + verticesPerLine + 1, vertexIndex + verticesPerLine);
+                    meshData.AddTriangle(triangleIndex + 3, vertexIndex + verticesPerLine + 1, vertexIndex, vertexIndex + 1);
                 }
             }
         }
@@ -106,14 +108,11 @@ namespace ProcudualGenerator
         public NativeArray<int> triangles;
         public NativeArray<Vector2> uvs;
 
-        private int triangleIndex;
-
-        public void AddTriangle(int a, int b, int c)
+        public void AddTriangle(int triangleIndex, int a, int b, int c)
         {
             triangles[triangleIndex] = a;
             triangles[triangleIndex + 1] = b;
             triangles[triangleIndex + 2] = c;
-            triangleIndex += 3;
         }
 
         public void CreateMesh(NativeArray<Color> colourMap, ref Mesh mesh)
